@@ -1,0 +1,12 @@
+# Ambientes Virtuais
+venv/
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Dados Brutos (Opcional se o arquivo for muito grande)
+*.csv
+
+# Sistema
+.DS_Store
