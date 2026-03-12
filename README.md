@@ -70,14 +70,14 @@ Principais Preditores: score_credito e comprometimento_renda.
 ### 📂 Estrutura do Projeto
 
 ```text
-├── data/                # Base de dados (CSV)
-├── models/              # Artefatos do modelo (.pkl)
-├── tests/               # Testes unitários (Pytest)
-├── analise_desafio.ipynb # Notebook com documentação completa
-├── predict.py           # Script de produção/inferência
-├── benchmark.py         # Script de validação de hardware
-├── requirements.txt     # Dependências do projeto
-└── .gitignore           # Filtro de arquivos para o Git
+├── data/                 # Base de dados (CSV)
+├── models/               # Artefatos do modelo (.pkl)
+├── tests/                # Testes unitários (Pytest)
+├── analise_desafio.ipynb  # Notebook com documentação completa
+├── predict.py            # Script de produção/inferência
+├── benchmark.py          # Script de validação de hardware
+├── requirements.txt      # Dependências do projeto
+└── .gitignore            # Filtro de arquivos para o Git
 
 🚀 Como executar?
 
