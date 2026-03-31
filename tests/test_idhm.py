@@ -1,24 +1,14 @@
 import pytest
 import sys
 import os
+import pandas as pd
 from pathlib import Path
 
 # --- Rigor de Engenharia: Localização Dinâmica de Módulos ---
-# Estrutura detectada:
-# Raiz/
-#  ├── src/idhm.py
-#  └── tests/test_idhm.py (Este arquivo)
-
-# Utilizamos resolve() para obter o caminho absoluto e evitar erros de contexto.
 current_file = Path(__file__).resolve()
-
-# Como o arquivo está em tests/test_idhm.py:
-# .parent é a pasta 'tests/'
-# .parent.parent é a RAIZ do projeto onde reside a pasta 'src'
 root_path = current_file.parent.parent
 src_path = str(root_path / "src")
 
-# Injetamos o caminho absoluto da pasta 'src' no início do PATH para prioridade total
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
@@ -26,40 +16,54 @@ if src_path not in sys.path:
 try:
     from idhm import find_idh_file, load_and_clean_idh, run_data_audit
 except ImportError as e:
-    # Diagnóstico técnico para MLOps
     print(f"\n❌ Erro de Importação: O motor 'idhm.py' não foi localizado em {src_path}")
-    print(f"Diretório atual de execução: {os.getcwd()}")
     raise e
 
 def test_file_discovery():
-    """Valida se o motor de busca localiza a planilha IDH_2010.xls na pasta de base de dados."""
+    """Valida se o motor de busca localiza a planilha IDH_2010.xls."""
     path = find_idh_file()
-    assert path is not None, "❌ Erro: O motor de busca não localizou a planilha IDH_2010.xls."
-    assert path.exists(), "❌ Erro: O caminho foi detectado, mas o arquivo físico não existe no disco."
+    assert path is not None, "❌ Erro: O motor de busca não localizou a planilha."
+    assert path.exists(), "❌ Erro: O arquivo físico não existe no disco."
 
-def test_data_cleaning_logic():
-    """Valida se a limpeza de colunas (snake_case) está operante e conforme o schema."""
+def test_data_cleaning_and_status_logic():
+    """Valida o Schema (incluindo a nova coluna status) e a regra de negócio de 0.7."""
     path = find_idh_file()
     df = load_and_clean_idh(path)
     
-    # Lista de colunas esperadas após o processamento rigoroso no idhm.py
+    # Lista atualizada de colunas (Agora com 7 colunas devido ao 'status')
     expected_cols = [
         'nome_da_unidade_da_federacao', 
         'municipio', 
         'idhm', 
         'idhm_educacao', 
         'idhm_longevidade', 
-        'idhm_renda'
+        'idhm_renda',
+        'status' # Nova coluna adicionada
     ]
     
-    # Validação de Schema e Tipagem (Indispensável para MLOps)
-    assert list(df.columns) == expected_cols, "❌ Erro: A renomeação ou seleção de colunas falhou."
-    assert df['idhm'].dtype == 'float64', "❌ Erro: A coluna IDHM deveria ser do tipo numérico (float)."
+    # 1. Validação de Schema
+    assert list(df.columns) == expected_cols, "❌ Erro: O Schema mudou ou a coluna 'status' não foi gerada."
+    
+    # 2. Validação da Regra de Negócio (O ponto principal do feedback do professor)
+    municipio_premium = df[df['idhm'] >= 0.7].iloc[0]
+    municipio_desenvolvimento = df[df['idhm'] < 0.7].iloc[0]
+    
+    assert municipio_premium['status'] == '✅ Premium', "❌ Erro: Falha na classificação de IDH Alto (>= 0.7)."
+    assert municipio_desenvolvimento['status'] == '⚠️ Em Desenvolvimento', "❌ Erro: Falha na classificação de IDH Baixo (< 0.7)."
 
 def test_audit_integrity():
-    """Valida se a função de auditoria aprova a base carregada e detecta a escala técnica."""
+    """Valida se a função de auditoria aprova a base carregada."""
     path = find_idh_file()
     df = load_and_clean_idh(path)
     
-    # O motor de auditoria deve retornar True se os dados respeitarem as regras de MLOps (escala 0 a 1)
-    assert run_data_audit(df) is True, "❌ Erro: A base de dados falhou na auditoria de integridade técnica."
+    # Auditoria de escala técnica (0 a 1)
+    assert run_data_audit(df) is True, "❌ Erro: A base de dados falhou na auditoria técnica."
+
+def test_numeric_consistency():
+    """Garante que todos os indicadores são do tipo float (essencial para cálculos)."""
+    path = find_idh_file()
+    df = load_and_clean_idh(path)
+    cols_numericas = ['idhm', 'idhm_educacao', 'idhm_longevidade', 'idhm_renda']
+    
+    for col in cols_numericas:
+        assert pd.api.types.is_float_dtype(df[col]), f"❌ Erro: A coluna {col} deveria ser float."

@@ -28,13 +28,14 @@ def load_and_clean_idh(file_path):
     
     Passos:
     1. Carga via engine 'xlrd' (obrigatório para ficheiros .xls legados).
-    2. Seleção de 6 features estratégicas para a análise de mercado.
-    3. Normalização de nomes para snake_case (evita problemas de encoding e espaços).
+    2. Seleção de colunas estratégicas.
+    3. Normalização de nomes para snake_case.
+    4. Aplicação da Regra de Negócio (Status Premium).
     """
     # Carga dos dados brutos com motor de compatibilidade
     df_raw = pd.read_excel(file_path, engine='xlrd')
     
-    # Seleção de colunas com base no Business Understanding (Pergunta Norteadora)
+    # Seleção de colunas com base no Business Understanding
     df_clean = df_raw[[
         'Nome da Unidade da Federação', 
         'Município', 
@@ -44,7 +45,7 @@ def load_and_clean_idh(file_path):
         'IDHM Renda'
     ]].copy()
     
-    # Renomeação padronizada para garantir reprodutibilidade
+    # Renomeação padronizada
     df_clean.columns = [
         'nome_da_unidade_da_federacao', 
         'municipio', 
@@ -53,29 +54,35 @@ def load_and_clean_idh(file_path):
         'idhm_longevidade', 
         'idhm_renda'
     ]
+
+    # Conversão forçada para numérico para evitar erros em auditorias
+    cols_num = ['idhm', 'idhm_educacao', 'idhm_longevidade', 'idhm_renda']
+    for col in cols_num:
+        df_clean[col] = pd.to_numeric(df_clean[col], errors='coerce')
+    
+    # --- NOVA REGRA DE NEGÓCIO (Requisito FIAP) ---
+    # Define o status baseado na meta de 0.7 validada com o professor
+    df_clean['status'] = df_clean['idhm'].apply(
+        lambda x: '✅ Premium' if x >= 0.7 else '⚠️ Em Desenvolvimento'
+    )
     
     return df_clean
 
 def run_data_audit(df_idhm, df_uf=None):
     """
     Executa a auditoria automática de qualidade (Data Quality Audit).
-    
-    Validações:
-    - Schema: Verifica se a limpeza de colunas ocorreu conforme o esperado.
-    - Integrity: Garante que não há valores nulos no indicador principal (IDHM).
-    - Domain: Valida se o IDH está na escala probabilística correta entre 0 e 1.
-    - Geography: Valida se a base contém as 27 unidades federativas brasileiras.
     """
-    # Validação de Schema (Garante que o pipeline de limpeza não quebrou)
+    # Validação de Schema (Agora verificando se a coluna 'status' existe)
     assert 'nome_da_unidade_da_federacao' in df_idhm.columns, "Erro de Schema: Colunas não mapeadas."
+    assert 'status' in df_idhm.columns, "Erro de Schema: Coluna 'status' não gerada."
     
-    # Validação de Dados Ausentes (Zero Tolerance para nulos no target)
+    # Validação de Dados Ausentes
     assert df_idhm['idhm'].isnull().sum() == 0, "Erro de Integridade: Detectados valores nulos no IDHM."
     
-    # Validação de Escala Matemática (Regra de Negócio do IDH)
+    # Validação de Escala Matemática (0 a 1)
     assert df_idhm['idhm'].max() <= 1.0 and df_idhm['idhm'].min() >= 0, "Erro de Domínio: Escala IDH inválida."
     
-    # Validação Geográfica (Opcional, se o agrupamento for fornecido)
+    # Validação Geográfica
     if df_uf is not None:
         assert len(df_uf) == 27, f"Erro Geográfico: Encontradas {len(df_uf)} UFs, esperado 27."
     
