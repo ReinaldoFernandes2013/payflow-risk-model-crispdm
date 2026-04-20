@@ -221,6 +221,7 @@ else:
     st.image("https://images.unsplash.com/photo-1551288049-bbbda536ad3a?auto=format&fit=crop&w=1350&q=80")
 
 st.markdown("---")
-st.caption("Desenvolvido por Reinaldo Fernandes (RM371717) - MBA AI Scientist FIAP")
-st.caption("Desenvolvido por Leonardo Junior Gonzales Mendoza (RM373713) - MBA AI Scientist FIAP")
-st.caption("Winny Tavares (RM 371471) - MBA AI Scientist FIAP")
+st.caption("Desenvolvido por Reinaldo Fernandes (RM371717) - Pós Tech - 1IAST Scientist FIAP")
+st.caption("Leonardo Junior Gonzales Mendoza (RM373713) - Pós Tech - 1IAST Scientist FIAP")
+st.caption("Winny Tavares (RM 371471) - Pós Tech - 1IAST Scientist FIAP")
+st.caption("Caio Rubino (RM 371492) - Pós Tech - 1IAST Scientist FIAP")
